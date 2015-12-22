@@ -1,42 +1,45 @@
-// Which programming languages have increased in rank recently?
-// We can find this data on the TIOBE index here:
-// http://www.tiobe.com/index.php/content/paperinfo/tpci/index.html
-
-// I've scraped the page and saved just the table rows for you in tiobe.html
-// This avoids a Cross Origin Resource sharing issue where you are not allowed to
-// $.get pages that are not on your domain
+/*global data */
+/*eslint quotes: 0 */
 
 // initialize the `data` variable here so, it has a global scope
-// if we were being really careful we could wrap all this in an IIFE or module
+// so it can be called from Function objects
 var data = '';
 
-$.get('tiobe.html', function(response){
-  // we take the response (text of tiobe.html) and assign it to data.
-  data = response;
-})
-  // and then we hand off to processTable when done
-  .done(processTable);
+// STEPS holds all the code we will walk through, step-by-step
+var steps = [];
 
-function processTable(){
-  // first we will just log the raw data
-  console.log(data);
+steps[0] = {
+  hint: "// first just log the raw data. It is in a variable named data.\n\
+// use jQuery's text method to set the value of the textarea named output\n\
+// click the process data button when ready to test\n\
+$('textarea[name=output]')\n",
+  answer: "$('textarea[name=output]').text(data);"
+};
 
-  // first real step is to figure out the rows
-  // split will create an array of rows for us
-  console.log( data.split( '<tr>' ) );
+steps[1] = {
+  hint: "// first real step is to figure out the rows\n\
+// split will create an array of rows for us\n\
+// split on the html for the row delimiter, <tr>\n",
+  answer: "$('textarea[name=output]').text( data.split( '<tr>' ) );"
+};
 
-  // the first result in the array of rows is an empty string, so
-  // let's get rid of that
-  console.log(
-    data
-      .split('<tr>')
-      .slice(1)
-  );
+steps[2] = {
+  hint: "// the first result in the array of rows is an empty string, so\n\
+// let's get rid of that\n",
+  answer: "$('textarea[name=output]').text(\n\
+    data\n\
+      .split('<tr>')\n\
+      .slice(1)   // take everything in the array but the first one (zero-th index)\n\
+  );"
+};
 
-  // now let's process each row
-  // we'll need to transform each row into something useful (like columns!)
-  // a map applies a function to each element of an array, so that's what we want
-  console.log(
+steps[3] = {
+  hint: "// now let's process each row\n\
+// we'll need to transform each row into something useful (like columns!)\n\
+// a map applies a function to each element of an array, so that's what we want\n\
+// make sure to invoke the step3(); at the end of the text area, it's not added for you automatically",
+  answer: function step3() {
+    $('textarea[name=output]').text(
     data
       .split('<tr>')
       .slice(1)
@@ -47,8 +50,14 @@ function processTable(){
           .slice(0, -5);
       })
   );
+  }
+};
 
-  console.log(
+steps[4] = {
+  hint: "//now we need to split the row into columns\n\
+// what delimits a column in a table? a <td>",
+  answer: function step4() {
+    $('textarea[name=output]').text(
     data
       .split('<tr>')
       .slice(1)
@@ -64,11 +73,17 @@ function processTable(){
           // columns of the table.
       })
   );
+  }
+};
 
-  // the problem is that each column has a </td> in it. That's extraneous.
-  // Let's get rid of it. We need to transform each element in an array, so
-  // that is a map, again. This time for each colulmn.
-  console.log(
+
+
+steps[5] = {
+  hint: "// the problem is that each column has a </td> in it. That's extraneous.\n\
+// Let's get rid of it. We need to transform each element in an array, so\n\
+// that is a map, again. This time for each colulmn.",
+  answer: function step5() {
+    $('textarea[name=output]').text(
     data
       .split('<tr>')
       .slice(1)
@@ -83,11 +98,15 @@ function processTable(){
           });
       })
   );
+  }
+};
 
-  // now we can answer our question about which programming languages have moved
-  // up in rank
 
-  console.log(
+steps[6] = {
+  hint: "// now we can answer our question about which programming languages have moved\n\
+// up in rank",
+  answer: function step6() {
+    var newData =
     data
       .split('<tr>')
       .slice(1)
@@ -112,6 +131,63 @@ function processTable(){
           });
         }
         return acc;
-      }, [])
-  );
-}
+      }, []);
+    $('textarea[name=output]').text(JSON.stringify(newData, null, '  '));
+  }
+};
+
+// end of steps definition
+
+
+// events
+$('.step-buttons').append(
+  steps.map(function(step, i) {
+    var questionAndAnswer = $('<div>');
+
+    var questionButton = $('<button>Step ' + i + '</button>');
+    questionButton.on('click', function(e) {
+      code_editor.setValue(steps[i].hint.toString());
+      $('#answer' + i).fadeIn(9000);
+    });
+
+    var answerButton = $('<button id="answer' + i
+      + '" style="display: none">Answer '
+      + i
+      + '</button>');
+    answerButton.on('click', function(e) {
+      code_editor.setValue(steps[i].answer.toString());
+    });
+
+    questionAndAnswer.append([
+      questionButton,
+      " ",
+      answerButton
+    ]);
+
+    return questionAndAnswer;
+  })
+);
+
+$('#prefill').on('click', function prefill(e) {
+  $.get('tiobe.html', function(response){
+    $('textarea[name=input]').text(response);
+    data = response;
+  });
+});
+
+$('input[name=submit]').on('click', function(e){
+  e.preventDefault();
+  var processor = new Function(code_editor.getValue());
+  processor();
+});
+
+$('button#clear').on('click',function(e){
+  $('textarea[name=output]').text('');
+});
+
+// set up editor
+var code_editor = ace.edit('code');
+code_editor.getSession().setMode('ace/mode/javascript');
+code_editor.getSession().setTabSize(2);
+code_editor.getSession().setUseSoftTabs(true);
+code_editor.$blockScrolling = Infinity;
